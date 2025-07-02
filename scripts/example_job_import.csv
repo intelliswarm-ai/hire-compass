@@ -1,0 +1,6 @@
+title,department,location,work_mode,required_skills,min_experience_years,max_experience_years,salary_min,salary_max,description
+Senior Software Engineer,Engineering,San Francisco CA,hybrid,"Python,Django,PostgreSQL,AWS,Docker",5,10,140000,180000,We are seeking a Senior Software Engineer to join our growing engineering team. You will be responsible for designing and implementing scalable backend services.
+Machine Learning Engineer,Data Science,New York NY,remote,"Python,TensorFlow,PyTorch,AWS,MLOps",3,8,130000,170000,Join our ML team to build and deploy machine learning models at scale. Experience with deep learning frameworks required.
+Frontend Developer,Engineering,Austin TX,onsite,"React,TypeScript,GraphQL,CSS,Jest",2,5,100000,140000,Looking for a talented frontend developer to create beautiful and responsive user interfaces for our products.
+DevOps Engineer,Operations,Seattle WA,hybrid,"Kubernetes,Docker,Terraform,AWS,Python",4,8,120000,160000,Help us build and maintain our cloud infrastructure. Strong experience with container orchestration required.
+Product Manager,Product,San Francisco CA,hybrid,"Agile,Scrum,JIRA,Analytics",5,10,130000,180000,Lead product development initiatives and work closely with engineering teams to deliver customer value.

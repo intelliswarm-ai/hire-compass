@@ -1,0 +1,135 @@
+name: HR Resume Matcher Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10']
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser chromium-chromedriver
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        python -m spacy download en_core_web_sm
+    
+    - name: Set up Ollama (mock)
+      run: |
+        # In CI, we'll use mock responses for Ollama
+        echo "OLLAMA_BASE_URL=http://localhost:11434" >> $GITHUB_ENV
+        echo "CI_MODE=true" >> $GITHUB_ENV
+    
+    - name: Run unit tests
+      run: |
+        python tests/unit/test_ranking_validation.py
+    
+    - name: Run integration tests
+      run: |
+        python tests/integration/test_full_pipeline.py
+    
+    - name: Run performance tests (subset)
+      run: |
+        # Run with reduced dataset for CI
+        python tests/performance/test_large_scale_matching.py --ci-mode
+      timeout-minutes: 10
+    
+    - name: Generate test report
+      if: always()
+      run: |
+        python tests/run_all_tests.py
+    
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-reports-${{ matrix.python-version }}
+        path: tests/reports/
+    
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const reportPath = 'tests/reports/latest_report.json';
+          
+          if (fs.existsSync(reportPath)) {
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            const stats = report.overall_statistics;
+            
+            const comment = `## Test Results
+            
+            - **Total Tests**: ${stats.total_tests}
+            - **Passed**: ${stats.total_passed} ✅
+            - **Failed**: ${stats.total_failures} ❌
+            - **Success Rate**: ${stats.success_rate}%
+            
+            [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+  performance-benchmark:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        python -m spacy download en_core_web_sm
+    
+    - name: Run performance benchmark
+      run: |
+        python tests/performance/test_large_scale_matching.py
+    
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'customBiggerIsBetter'
+        output-file-path: tests/reports/performance_report_*.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  kaggle-resume-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.kaggle
+    container_name: kaggle-resume-mcp
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MCP_SERVER_NAME=kaggle-resume-analyzer
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  advanced-resume-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+    container_name: advanced-resume-mcp
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MCP_SERVER_NAME=advanced-resume-analyzer
+      - LOG_LEVEL=INFO
+      - TRANSFORMERS_CACHE=/app/models/transformers
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+networks:
+  mcp-network:
+    driver: bridge
